@@ -272,30 +272,24 @@ function needsParens(path, options) {
           const no = node.operator;
           const np = util.getPrecedence(no);
 
-          if (pp > np) {
+          // ** is right-associative
+          // x ** y ** z --> x ** (y ** z)
+          if (pp === "**") {
             return true;
           }
 
-          if ((po === "||" || po === "??") && no === "&&") {
+          // If same precendence, remove parens
+          // x * (y / z) -> x * y / z
+          if (np === pp) {
+            return false;
+          }
+          // IFF left-to-right precendence is broken, add parens
+          // z + x * y -> z + (x * y)
+          // x * y + z -> x * y + z
+          if (name === "left" && pp > np) {
             return true;
           }
-
-          if (pp === np && name === "right") {
-            assert.strictEqual(parent.right, node);
-            return true;
-          }
-
-          if (pp === np && !util.shouldFlatten(po, no)) {
-            return true;
-          }
-
-          if (pp < np && no === "%") {
-            return !util.shouldFlatten(po, no);
-          }
-
-          // Add parenthesis when working with binary operators
-          // It's not stricly needed but helps with code understanding
-          if (util.isBitwiseOperator(po)) {
+          if (name === "right" && np > pp) {
             return true;
           }
 

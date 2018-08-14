@@ -305,14 +305,6 @@ const bitshiftOperators = {
 };
 
 function shouldFlatten(parentOp, nodeOp) {
-  if (getPrecedence(nodeOp) !== getPrecedence(parentOp)) {
-    // x + y % z --> (x + y) % z
-    if (nodeOp === "%" && !additiveOperators[parentOp]) {
-      return true;
-    }
-
-    return false;
-  }
 
   // ** is right-associative
   // x ** y ** z --> x ** (y ** z)
@@ -320,34 +312,22 @@ function shouldFlatten(parentOp, nodeOp) {
     return false;
   }
 
-  // x == y == z --> (x == y) == z
-  if (equalityOperators[parentOp] && equalityOperators[nodeOp]) {
+  const np = getPrecedence(nodeOp);
+  const pp = getPrecedence(parentOp);
+
+  // If same precendence, remove parens (aka flatten)
+  // x * (y / z) -> x * y / z
+  if (np === pp) {
+    return true;
+  }
+  // If left-to-right precendence is broken, add parens (aka don't flatten)
+  // x * y + z -> (x * y) + z
+  if (pp > np) {
     return false;
   }
+  // TODO: above should only count for left op, not right op
 
-  // x * y % z --> (x * y) % z
-  if (
-    (nodeOp === "%" && multiplicativeOperators[parentOp]) ||
-    (parentOp === "%" && multiplicativeOperators[nodeOp])
-  ) {
-    return false;
-  }
-
-  // x * y / z --> (x * y) / z
-  // x / y * z --> (x / y) * z
-  if (
-    nodeOp !== parentOp &&
-    multiplicativeOperators[nodeOp] &&
-    multiplicativeOperators[parentOp]
-  ) {
-    return false;
-  }
-
-  // x << y << z --> (x << y) << z
-  if (bitshiftOperators[parentOp] && bitshiftOperators[nodeOp]) {
-    return false;
-  }
-
+  // Otherwise, flatten and remove parens
   return true;
 }
 
